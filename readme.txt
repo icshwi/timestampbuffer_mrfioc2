@@ -5,4 +5,4 @@ nh_st.cmd
 #configure frequencies
 freq.cfg
 #set sequencer
-python calcfreq.py
+python ts_freq.py
