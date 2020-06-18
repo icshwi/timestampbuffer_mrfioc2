@@ -14,23 +14,23 @@ FreqEvt = []
 EvtNo = []
 FlshNo = []
 TotalFreqs = 0
-
-#pdb.set_trace()
-with open("freq.cfg","r") as FreqFile:
-	for x in FreqFile:
-		if x[0] != "#" and int(x[0]) > 0:
-			Freqs.append(int(x.split(",")[0]))
-			FreqEvt.append(int(x.split(",")[1]))
-			EvtNo.append(int(x.split(",")[2]))
-			FlshNo.append(int(x.split(",")[3]))
-			TotalFreqs = TotalFreqs +1
+EvgPrescaleSP 	= pvaccess.Channel("Utgard:MDS:TS-EVG-01:Mxc1-Prescaler-SP", pvaccess.ProviderType.CA)
+EvgEvtCode 	= pvaccess.Channel("Utgard:MDS:TS-EVG-01:TrigEvt0-EvtCode-SP", pvaccess.ProviderType.CA)
+EvrOutTrig 	= pvaccess.Channel("MDTST{evr:1-DlyGen:3}Evt:Trig0-SP", pvaccess.ProviderType.CA)
+EvrInEvt 	= pvaccess.Channel("MDTST{evr:1-In:0}Code:Ext-SP", pvaccess.ProviderType.CA)
+EvrCptEvtSP 	= pvaccess.Channel("MDTST{evr:1-ts:1}CptEvt-SP", pvaccess.ProviderType.CA)
+EvrFlshEvtSP 	= pvaccess.Channel("MDTST{evr:1-ts:1}FlshEvt-SP", pvaccess.ProviderType.CA)
+EvrTSI		= pvaccess.Channel("MDTST{evr:1-ts:1}TS-I", pvaccess.ProviderType.CA)
 
 #pdb.set_trace()
 
+#pdb.set_trace()
+def TestCaput():
+	return
+	
 def CalcDiff():
 	# calc diff
 	global TSString, TSSplitString, TSList, TSDiffList, MaxDiff, MinDiff
-	EvrTSI   = pvaccess.Channel("MDTST{evr:1-ts:1}TS-I", pvaccess.ProviderType.CA)
 	TSSplitString = []
 	TSDiffList = []
 	TSList = []
@@ -46,6 +46,8 @@ def CalcDiff():
 	print ("Maxdiff: ", MaxDiff)
 	print ("SP freq: ", Freqs[0], "Act freq :", len(TSList)*14, "No of TS: ", len(TSList))
 	
+def TestChngCptEvt():
+	return
 	
 def main():
 #	os.system("caput Utgard:MDS:TS-EVG-01:Mxc1-Prescaler-SP " +str(88052500/Freqs[0]))
@@ -58,14 +60,15 @@ def main():
 #	os.system("caput MDTST{evr:1-ts:1}CptEvt-SP " +str(EvtNo[0]))
 #	os.system("caput MDTST{evr:1-ts:1}FlshEvt-SP " +str(FlshNo[0]))
 #	time.sleep(1)	
-	EvgPrescaleSP 	= pvaccess.Channel("Utgard:MDS:TS-EVG-01:Mxc1-Prescaler-SP", pvaccess.ProviderType.CA)
-	EvgEvtCode 	= pvaccess.Channel("Utgard:MDS:TS-EVG-01:TrigEvt0-EvtCode-SP", pvaccess.ProviderType.CA)
-	EvrOutTrig 	= pvaccess.Channel("MDTST{evr:1-DlyGen:3}Evt:Trig0-SP", pvaccess.ProviderType.CA)
-	EvrInEvt 	= pvaccess.Channel("MDTST{evr:1-In:0}Code:Ext-SP", pvaccess.ProviderType.CA)
-	EvrCptEvtSP 	= pvaccess.Channel("MDTST{evr:1-ts:1}CptEvt-SP", pvaccess.ProviderType.CA)
-	EvrFlshEvtSP 	= pvaccess.Channel("MDTST{evr:1-ts:1}FlshEvt-SP", pvaccess.ProviderType.CA)
 #	EvgEvtCode 	= pvaccess.Channel(""	, pvaccess.ProviderType.CA)
-	
+	with open("freq.cfg","r") as FreqFile:
+		for x in FreqFile:
+			if x[0] != "#" and int(x[0]) > 0:
+				Freqs.append(int(x.split(",")[0]))
+				FreqEvt.append(int(x.split(",")[1]))
+				EvtNo.append(int(x.split(",")[2]))
+				FlshNo.append(int(x.split(",")[3]))
+	TestChngCptEvt()	
 	EvgPrescaleSP.putInt(int(round(88052500/Freqs[0])))	
 	EvgEvtCode.putInt(int(FreqEvt[0]))
 	EvrOutTrig.putInt(int(FreqEvt[0]))
