@@ -31,7 +31,7 @@ def pvget(channel):
 class IOC:
 	def __init__(self):
 		# the PVs of the IOC
-		self.pv_names = ["Utgard:MDS:TS-EVG-01:Mxc1-Prescaler-SP", "Utgard:MDS:TS-EVG-01:TrigEvt0-EvtCode-SP", "MDTST{evr:1-DlyGen:3}Evt:Trig0-SP", "MDTST{evr:1-In:0}Code:Ext-SP", "MDTST{evr:1-ts:1}CptEvt-SP", "MDTST{evr:1-ts:1}CptEvt-SP", "MDTST{evr:1-ts:1}TS-I"]
+		self.pv_names = ["Utgard:MDS:TS-EVG-01:Mxc1-Prescaler-SP", "Utgard:MDS:TS-EVG-01:TrigEvt0-EvtCode-SP", "MDTST{evr:1-DlyGen:3}Evt:Trig0-SP", "MDTST{evr:1-In:0}Code:Ext-SP", "MDTST{evr:1-ts:1}CptEvt-SP", "MDTST{evr:1-ts:1}FlshEvt-SP", "MDTST{evr:1-ts:1}TS-I"]
 	# wait for the IOC to come online
 	#        c = pvaccess.Channel(self.pv_names[0])
 	#        c.setTimeout(30);
@@ -39,6 +39,7 @@ class IOC:
 	# create the channels
 		self.EvgPrescaleSP, self.EvgEvtCode, self.EvrOutEvtTrig, self.EvrInEvt, self.EvrCptEvtSP, self.EvrFlshEvtSP, self.EvrTSI = [pvaccess.Channel(n, pvaccess.ProviderType.CA) for n in self.pv_names]
 
+#use session or module scope; the channel is not closed between tests and will therefore cause an error if scope is function
 @pytest.fixture(scope="function")
 def ioc():
 	return IOC()
@@ -63,73 +64,69 @@ def params():
 					
 	return ParamStruct
 
-#def test_get(ioc):
-#	x = pvget(ioc.EvgPrescaleSP)
-#	assert(x == 1000)
+def setup_env(ioc,params):
+        ioc.EvgPrescaleSP.put(round(88052500/params.Freq))
+        ioc.EvgEvtCode.put(params.FreqEvt)
+        ioc.EvrOutEvtTrig.put(params.FreqEvt)
+        ioc.EvrInEvt.put(params.EvtNo)
+        ioc.EvrCptEvtSP.put(params.EvtNo)
+        ioc.EvrFlshEvtSP.put(params.FlshNo)
 
-#def test_put(ioc):
-#	x = 10000
-#	ioc.EvgPrescaleSP.put(x)
-#	assert(ioc.EvgPrescaleSP ==x)
-
-	
-def test_timestamp_diff(ioc,params):
+def test_period_diff(ioc,params):
+	setup_env(ioc,params)
+	time.sleep(1)
 	TSDiffList = []
-	MaxDiff = MinDiff = -1
-#	ioc.EvgPrescaleSP
+	MaxPeriod = MinPeriod = -1
 	TSList = pvget(ioc.EvrTSI)
 	for i in range(len(TSList)):
 		if i > 0:
 			TSDiffList.append(TSList[i]-TSList[i-1])
-	MaxDiff = max(TSDiffList)
-	MinDiff = min(TSDiffList)
-	print ("Mindiff: ", MinDiff)
-	print ("Maxdiff: ", MaxDiff)
+	MaxPeriod = max(TSDiffList)
+	MinPeriod = min(TSDiffList)
+	#print ("Mindiff: ", MinPeriod)
+	#print ("Maxdiff: ", MaxPeriod)
 	print ("SP freq: ", params.Freq, "Act freq :", len(TSList)*14, "No of TS: ", len(TSList))
 	# within 2 ticks
-	assert(MaxDiff-MinDiff < 1000000000/88052500*2)
+	assert(MaxPeriod-MinPeriod < 1000000000/88052500*2)
 	#assert(testPar[0] - len(TSList)*14 < 200)
-	#minmax(MaxDiff,MinDiff)
+	#minmax(MaxPeriod,MinPeriod)	
+
+def tooHighCptEvt(ioc):
+	setup_env(ioc,params)
+	origCptEvt = pvget(ioc.EvrCptEvtSP)
+	ioc.EvrCptEvtSP.put(300)
+	time.sleep(0.2)
+	print("cpt evt: ", pvget(ioc.EvrCptEvtSP))
+	newCptEvt = pvget(ioc.EvrCptEvtSP)
+	assert(origCptEvt == newCptEvt)
+
+def test_changeCptEvt(ioc,params):
+	setup_env(ioc,params)
+	EvrCptEvtSP = pvaccess.Channel("MDTST{evr:1-ts:1}CptEvt-SP", pvaccess.ProviderType.CA)
+#	origCptEvt = ioc.EvrCptEvtSP.get()["value"]
+	ioc.EvrCptEvtSP.put(params.EvtNo)
+	origCptEvt = pvget(EvrCptEvtSP)
+	ioc.EvrCptEvtSP.put(94)
+	time.sleep(0.2)
+	assert(origCptEvt != pvget(EvrCptEvtSP))
+
+def test_highBWLimit(ioc,params):
 	
+	bwHzLimit = 20000
+	setup_env(ioc,params)
+	ioc.EvgPrescaleSP.put(round(88052500/bwHzLimit))
+	timestampsPerFlush = round(bwHzLimit/14)
+	time.sleep(0.2)
+	TSDiffList = []
+	TSList = pvget(ioc.EvrTSI)
+	#print ("Mindiff: ", MinPeriod)
+	#print ("Maxdiff: ", MaxPeriod)
+	print ("TS per flush: ", timestampsPerFlush, "No of TS: ", len(TSList))
+	# within 2 ticks
+	assert(timestampsPerFlush-len(TSList)<2)
 
-#def test_minmax(MaxDiff, MinDiff):	
-#	assert(MaxDiff-MinDiff < 23)
-
-def TestChngCptEvt():
-	return
+def test_changeFlshEvt(ioc,params):
+	newFlshEvt = 125
+	setup_env(ioc,params)
+	ioc.EvrFlshEvtSP.put(newFlshEvt)
 	
-def main():
-#	os.system("caput Utgard:MDS:TS-EVG-01:Mxc1-Prescaler-SP " +str(88052500/Freqs[0]))
-#	os.system("caput Utgard:MDS:TS-EVG-01:TrigEvt0-EvtCode-SP " +str(FreqEvt[0]))
-#	os.system("caput MDTST{evr:1-DlyGen:3}Evt:Trig0-SP " +str(FreqEvt[0]))
-#	caput('Utgard:MDS:TS-EVG-01:Mxc1-Prescaler-SP', 88052500/Freqs[0])
-#	time.sleep(1) 
-#	os.system("caput MDTST{evr:1-SoftSeq:0}Commit-Cmd" +" 1")
-#	os.system("caput MDTST{evr:1-In:0}Code:Ext-SP " +str(EvtNo[0]))
-#	os.system("caput MDTST{evr:1-ts:1}CptEvt-SP " +str(EvtNo[0]))
-#	os.system("caput MDTST{evr:1-ts:1}FlshEvt-SP " +str(FlshNo[0]))
-#	time.sleep(1)	
-#	EvgEvtCode 	= pvaccess.Channel(""	, pvaccess.ProviderType.CA)
-	with open("freq.cfg","r") as FreqFile:
-		for x in FreqFile:
-			if x[0] != "#" and int(x[0]) > 0:
-				Freqs.append(int(x.split(",")[0]))
-				FreqEvt.append(int(x.split(",")[1]))
-				EvtNo.append(int(x.split(",")[2]))
-				FlshNo.append(int(x.split(",")[3]))
-	TestChngCptEvt()	
-	EvgPrescaleSP.putInt(int(round(88052500/Freqs[0])))	
-	EvgEvtCode.putInt(int(FreqEvt[0]))
-	EvrOutTrig.putInt(int(FreqEvt[0]))
-	EvrInEvt.putInt(int(EvtNo[0]))
-	EvrCptEvtSP.putInt(int(EvtNo[0]))
-	EvrFlshEvtSP.putInt(int(FlshNo[0]))
-#	myCA = pvaccess.Channel("MDTST{evr:1-ts:1}FlshEvt-SP", pvaccess.ProviderType.CA)
-#	print(myCA.get().getInt())
-#	print (caget('MDTST{evr:1-ts:1}CptEvt-SP'))
-
-	time.sleep(1)
-	calcDiff()
-
-if __name__ == "__main__":
-	main()
