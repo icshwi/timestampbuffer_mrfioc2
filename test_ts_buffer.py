@@ -8,6 +8,8 @@ import subprocess as sp
 #from pvaccess import Channel
 import pvaccess
 from epics import caget, caput, cainfo, camonitor
+import pytest
+import struct
 
 Freqs = []
 FreqEvt = []
@@ -22,50 +24,77 @@ EvrCptEvtSP 	= pvaccess.Channel("MDTST{evr:1-ts:1}CptEvt-SP", pvaccess.ProviderT
 EvrFlshEvtSP 	= pvaccess.Channel("MDTST{evr:1-ts:1}FlshEvt-SP", pvaccess.ProviderType.CA)
 EvrTSI		= pvaccess.Channel("MDTST{evr:1-ts:1}TS-I", pvaccess.ProviderType.CA)
 
+def pvget(channel):
+	return channel.get()["value"]
+
 #pdb.set_trace()
 class IOC:
-    def __init__(self):
-        # the PVs of the IOC
-        self.pv_names = ["Utgard:MDS:TS-EVG-01:Mxc1-Prescaler-SP", "Utgard:MDS:TS-EVG-01:TrigEvt0-EvtCode-SP", "MDTST{evr:1-DlyGen:3}Evt:Trig0-SP", "MDTST{evr:1-In:0}Code:Ext-SP", "MDTST{evr:1-ts:1}CptEvt-SP", "MDTST{evr:1-ts:1}CptEvt-SP", "MDTST{evr:1-ts:1}TS-I"]
-
-        # wait for the IOC to come online
-        c = pvaccess.Channel(self.pv_names[0])
-        c.setTimeout(30);
-        c.get()
-
-        # creaete the channels
-        self.EvgPresSP, self.EvgEvtCode, self.EvrOutEvtTrig, self.EvrInEvt, self.EvrCptEvtSP, self.EvrFlshEvtSP, self.EvrTSI = [pvaccess.Channel(n, pvaccess.ProviderType.CA) for n in self.pv_names]
+	def __init__(self):
+		# the PVs of the IOC
+		self.pv_names = ["Utgard:MDS:TS-EVG-01:Mxc1-Prescaler-SP", "Utgard:MDS:TS-EVG-01:TrigEvt0-EvtCode-SP", "MDTST{evr:1-DlyGen:3}Evt:Trig0-SP", "MDTST{evr:1-In:0}Code:Ext-SP", "MDTST{evr:1-ts:1}CptEvt-SP", "MDTST{evr:1-ts:1}CptEvt-SP", "MDTST{evr:1-ts:1}TS-I"]
+	# wait for the IOC to come online
+	#        c = pvaccess.Channel(self.pv_names[0])
+	#        c.setTimeout(30);
+	#        c.get()
+	# create the channels
+		self.EvgPrescaleSP, self.EvgEvtCode, self.EvrOutEvtTrig, self.EvrInEvt, self.EvrCptEvtSP, self.EvrFlshEvtSP, self.EvrTSI = [pvaccess.Channel(n, pvaccess.ProviderType.CA) for n in self.pv_names]
 
 @pytest.fixture(scope="function")
-def ioc(function_scoped_container_getter):
-    return IOC()
+def ioc():
+	return IOC()
 
-def test_put(ioc):
-    x = [1,2,3]
-    ioc..put(x)
-    assert_pv_array_equal(ioc.addresses, x)
+class ParamStruct:
+	def __init__(self):
+		self.Freq = Freq
+		self.FreqEvt = FreqEvt
+		self.EvtNo = EvtNo
+		self.FlshNo = FlshNo
 
-def TestCaput():
-	return
+@pytest.fixture(scope="function")
+def params():
+	array = []
+	with open("freq.cfg","r") as FreqFile:
+		for x in FreqFile:
+			if x[0] != "#" and int(x[0]) > 0:
+				ParamStruct.Freq = int(x.split(",")[0])
+				ParamStruct.FreqEvt = int(x.split(",")[1])
+				ParamStruct.EvtNo = int(x.split(",")[2])
+				ParamStruct.FlshNo = int(x.split(",")[3])
+					
+	return ParamStruct
+
+#def test_get(ioc):
+#	x = pvget(ioc.EvgPrescaleSP)
+#	assert(x == 1000)
+
+#def test_put(ioc):
+#	x = 10000
+#	ioc.EvgPrescaleSP.put(x)
+#	assert(ioc.EvgPrescaleSP ==x)
+
 	
-def CalcDiff():
-	# calc diff
-	global TSString, TSSplitString, TSList, TSDiffList, MaxDiff, MinDiff
-	TSSplitString = []
+def test_timestamp_diff(ioc,params):
 	TSDiffList = []
-	TSList = []
 	MaxDiff = MinDiff = -1
-	TSList = EvrTSI.get()["value"]
+#	ioc.EvgPrescaleSP
+	TSList = pvget(ioc.EvrTSI)
 	for i in range(len(TSList)):
-#		print(TSList[i])
 		if i > 0:
 			TSDiffList.append(TSList[i]-TSList[i-1])
 	MaxDiff = max(TSDiffList)
 	MinDiff = min(TSDiffList)
 	print ("Mindiff: ", MinDiff)
 	print ("Maxdiff: ", MaxDiff)
-	print ("SP freq: ", Freqs[0], "Act freq :", len(TSList)*14, "No of TS: ", len(TSList))
+	print ("SP freq: ", params.Freq, "Act freq :", len(TSList)*14, "No of TS: ", len(TSList))
+	# within 2 ticks
+	assert(MaxDiff-MinDiff < 1000000000/88052500*2)
+	#assert(testPar[0] - len(TSList)*14 < 200)
+	#minmax(MaxDiff,MinDiff)
 	
+
+#def test_minmax(MaxDiff, MinDiff):	
+#	assert(MaxDiff-MinDiff < 23)
+
 def TestChngCptEvt():
 	return
 	
@@ -100,7 +129,7 @@ def main():
 #	print (caget('MDTST{evr:1-ts:1}CptEvt-SP'))
 
 	time.sleep(1)
-	CalcDiff()
+	calcDiff()
 
 if __name__ == "__main__":
 	main()
