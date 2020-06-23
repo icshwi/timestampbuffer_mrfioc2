@@ -4,42 +4,44 @@ from collections import OrderedDict
 import os
 import time
 import pdb
-import subprocess as sp
-#from pvaccess import Channel
 import pvaccess
 from epics import caget, caput, cainfo, camonitor
 import pytest
 import struct
 
-#Freqs = []
-#FreqEvt = []
-#EvtNo = []
-#FlshNo = []
-#TotalFreqs = 0
-#EvgPrescaleSP 	= pvaccess.Channel("Utgard:MDS:TS-EVG-01:Mxc1-Prescaler-SP", pvaccess.ProviderType.CA)
-#EvgEvtCode 	= pvaccess.Channel("Utgard:MDS:TS-EVG-01:TrigEvt0-EvtCode-SP", pvaccess.ProviderType.CA)
-#EvrOutTrig 	= pvaccess.Channel("MDTST{evr:1-DlyGen:3}Evt:Trig0-SP", pvaccess.ProviderType.CA)
-#EvrInEvt 	= pvaccess.Channel("MDTST{evr:1-In:0}Code:Ext-SP", pvaccess.ProviderType.CA)
-#EvrCptEvtSP 	= pvaccess.Channel("MDTST{evr:1-ts:1}CptEvt-SP", pvaccess.ProviderType.CA)
-#EvrFlshEvtSP 	= pvaccess.Channel("MDTST{evr:1-ts:1}FlshEvt-SP", pvaccess.ProviderType.CA)
-#EvrTSI		= pvaccess.Channel("MDTST{evr:1-ts:1}TS-I", pvaccess.ProviderType.CA)
 
 def pvget(channel):
 	return channel.get()["value"]
 
-#pdb.set_trace()
 class IOC:
 	def __init__(self):
-		# the PVs of the IOC
-		self.pv_names = ["Utgard:MDS:TS-EVG-01:Mxc1-Prescaler-SP", "Utgard:MDS:TS-EVG-01:TrigEvt0-EvtCode-SP", "MDTST{evr:1-DlyGen:3}Evt:Trig0-SP", "MDTST{evr:1-In:0}Code:Ext-SP", "MDTST{evr:1-ts:1}CptEvt-SP", "MDTST{evr:1-ts:1}FlshEvt-SP", "MDTST{evr:1-ts:1}TS-I"]
-	# wait for the IOC to come online
-	#        c = pvaccess.Channel(self.pv_names[0])
-	#        c.setTimeout(30);
-	#        c.get()
-	# create the channels
-		self.EvgPrescaleSP, self.EvgEvtCode, self.EvrOutEvtTrig, self.EvrInEvt, self.EvrCptEvtSP, self.EvrFlshEvtSP, self.EvrTSI = [pvaccess.Channel(n, pvaccess.ProviderType.CA) for n in self.pv_names]
-
-#use session or module scope; the channel is not closed between tests and will therefore cause an error if scope is function
+		self.EvgPrescaleSP1 = pvaccess.Channel("Utgard:MDS:TS-EVG-01:Mxc2-Prescaler-SP", pvaccess.ProviderType.CA)
+		self.EvgPrescaleSP2 = pvaccess.Channel("Utgard:MDS:TS-EVG-01:Mxc3-Prescaler-SP", pvaccess.ProviderType.CA)
+		self.EvgPrescaleSP3 = pvaccess.Channel("Utgard:MDS:TS-EVG-01:Mxc4-Prescaler-SP", pvaccess.ProviderType.CA)
+		self.EvgPrescaleSP4 = pvaccess.Channel("Utgard:MDS:TS-EVG-01:Mxc5-Prescaler-SP", pvaccess.ProviderType.CA)
+		self.EvgEvtCode1 = pvaccess.Channel("Utgard:MDS:TS-EVG-01:TrigEvt2-EvtCode-SP", pvaccess.ProviderType.CA)
+		self.EvgEvtCode2 = pvaccess.Channel("Utgard:MDS:TS-EVG-01:TrigEvt3-EvtCode-SP", pvaccess.ProviderType.CA)
+		self.EvgEvtCode3 = pvaccess.Channel("Utgard:MDS:TS-EVG-01:TrigEvt4-EvtCode-SP", pvaccess.ProviderType.CA)
+		self.EvgEvtCode4 = pvaccess.Channel("Utgard:MDS:TS-EVG-01:TrigEvt5-EvtCode-SP", pvaccess.ProviderType.CA)
+		self.EvrOutEvtTrig = pvaccess.Channel("MDTST{evr:1-DlyGen:3}Evt:Trig0-SP", pvaccess.ProviderType.CA)
+		self.EvrInEvt = pvaccess.Channel("MDTST{evr:1-In:0}Code:Ext-SP", pvaccess.ProviderType.CA)
+		self.EvrCptEvtSP1 = pvaccess.Channel("MDTST{evr:1-tsflu:1}CptEvt-SP", pvaccess.ProviderType.CA)
+		self.EvrCptEvtSP2 = pvaccess.Channel("MDTST{evr:1-tsflu:2}CptEvt-SP", pvaccess.ProviderType.CA)
+		self.EvrCptEvtSP3 = pvaccess.Channel("MDTST{evr:1-tsflu:3}CptEvt-SP", pvaccess.ProviderType.CA)
+		self.EvrCptEvtSP4 = pvaccess.Channel("MDTST{evr:1-tsflu:4}CptEvt-SP", pvaccess.ProviderType.CA)
+		self.EvrFlshEvtSP1 = pvaccess.Channel("MDTST{evr:1-tsflu:1}FlshEvt-SP", pvaccess.ProviderType.CA)
+		self.EvrFlshEvtSP2 = pvaccess.Channel("MDTST{evr:1-tsflu:2}FlshEvt-SP", pvaccess.ProviderType.CA)
+		self.EvrFlshEvtSP3 = pvaccess.Channel("MDTST{evr:1-tsflu:3}FlshEvt-SP", pvaccess.ProviderType.CA)
+		self.EvrFlshEvtSP4 = pvaccess.Channel("MDTST{evr:1-tsflu:4}FlshEvt-SP", pvaccess.ProviderType.CA)
+		self.EvrTSI1 = pvaccess.Channel("MDTST{evr:1-tsflu:1}TS-I", pvaccess.ProviderType.CA)
+		self.EvrTSI2 = pvaccess.Channel("MDTST{evr:1-tsflu:2}TS-I", pvaccess.ProviderType.CA)
+		self.EvrTSI3 = pvaccess.Channel("MDTST{evr:1-tsflu:3}TS-I", pvaccess.ProviderType.CA)
+		self.EvrTSI4 = pvaccess.Channel("MDTST{evr:1-tsflu:4}TS-I", pvaccess.ProviderType.CA)
+		self.EvrCptEvtFirSP1 = pvaccess.Channel("MDTST{evr:1-tsfir:1}CptEvt-SP", pvaccess.ProviderType.CA)
+		self.EvrFlshEvtFirSP1 = pvaccess.Channel("MDTST{evr:1-tsfir:1}FlshEvt-SP", pvaccess.ProviderType.CA)
+		self.EvrTSIFir1 = pvaccess.Channel("MDTST{evr:1-tsfir:1}TS-I", pvaccess.ProviderType.CA)
+		self.EvrDropI1 = pvaccess.Channel("MDTST{evr:1-tsflu:1}Drop-I", pvaccess.ProviderType.CA)
+		self.EvrDropI2 = pvaccess.Channel("MDTST{evr:1-tsflu:2}Drop-I", pvaccess.ProviderType.CA)
 @pytest.fixture(scope="session")
 def ioc():
 	return IOC()
@@ -65,84 +67,185 @@ def params():
 	return ParamStruct
 
 def setup_env(ioc,params):
-	ioc.EvgPrescaleSP.put(round(88052500/params.Freq))
-	ioc.EvgEvtCode.put(params.FreqEvt)
-	ioc.EvrOutEvtTrig.put(params.FreqEvt)
-	ioc.EvrInEvt.put(params.EvtNo)
-	ioc.EvrCptEvtSP.put(params.EvtNo)
-	ioc.EvrFlshEvtSP.put(params.FlshNo)
+	EVGFreq = 28
+	FreqEvt = 92
+	CptEvt = 92
+	FlshEvt = 14
+	ioc.EvgPrescaleSP1.put(round(88052500/EVGFreq))
+	ioc.EvgPrescaleSP2.put(round(88052500/EVGFreq))
+	ioc.EvgPrescaleSP3.put(round(88052500/EVGFreq))
+	ioc.EvgPrescaleSP4.put(round(88052500/EVGFreq))
+	ioc.EvgEvtCode1.put(FreqEvt)
+	ioc.EvgEvtCode2.put(FreqEvt+1)
+	ioc.EvgEvtCode3.put(FreqEvt+2)
+	ioc.EvgEvtCode4.put(FreqEvt+3)
+	ioc.EvrOutEvtTrig.put(FreqEvt)
+	ioc.EvrInEvt.put(FreqEvt-1)
+	ioc.EvrCptEvtSP1.put(CptEvt)
+	ioc.EvrCptEvtSP2.put(CptEvt+1)
+	ioc.EvrCptEvtSP3.put(CptEvt+2)
+	ioc.EvrCptEvtSP4.put(CptEvt+3)
+	ioc.EvrFlshEvtSP1.put(FlshEvt)
+	ioc.EvrFlshEvtSP2.put(FlshEvt)
+	ioc.EvrFlshEvtSP3.put(FlshEvt)
+	ioc.EvrFlshEvtSP4.put(FlshEvt)
+	ioc.EvrCptEvtFirSP1.put(CptEvt)
+	ioc.EvrFlshEvtFirSP1.put(FlshEvt)
 	time.sleep(0.2)
 
-def test_period_diff(ioc,params):
+def tooHighCptEvt(ioc):
+	tooHighEvtNo = 300
+	setup_env(ioc,params)
+	origCptEvt = pvget(ioc.EvrCptEvtSP1)
+	ioc.EvrCptEvtSP1.put(tooHighEvtNo)
+	time.sleep(0.2)
+	newCptEvt = pvget(ioc.EvrCptEvtSP1)
+	assert(origCptEvt == newCptEvt)
+
+def tooHighFlshEvt(ioc):
+	tooHighEvtNo = 300
+	setup_env(ioc,params)
+	origCptEvt = pvget(ioc.EvrFlshEvtSP1)
+	ioc.EvrFlshEvtSP1.put(tooHighEvtNo)
+	time.sleep(0.2)
+	newCptEvt = pvget(ioc.EvrFlshEvtSP1)
+	assert(origCptEvt == newCptEvt)
+
+
+def test_changeCptEvt(ioc,params):
+	setup_env(ioc,params)
+#	EvrCptEvtSP = pvaccess.Channel("MDTST{evr:1-tsflu:1}CptEvt-SP", pvaccess.ProviderType.CA)
+#	origCptEvt = ioc.EvrCptEvtSP.get()["value"]
+	origCptEvt = pvget(ioc.EvrCptEvtSP1)
+	ioc.EvrCptEvtSP1.put(params.EvtNo)
+	time.sleep(0.5)
+	origCptEvt = pvget(ioc.EvrCptEvtSP1)
+	ioc.EvrCptEvtSP1.put(94)
+	time.sleep(0.5)
+	assert(origCptEvt != pvget(ioc.EvrCptEvtSP1))
+
+def test_changeFlshEvtAndLowFreqFlsh(ioc,params):
+	newFlshEvt = 125
+	setup_env(ioc,params)
+	ioc.EvrFlshEvtSP1.put(14)
+	time.sleep(0.4)
+	noTS14 = len(pvget(ioc.EvrTSI1))
+	ioc.EvrFlshEvtSP1.put(newFlshEvt)
+	time.sleep(2.2)
+	noTS125 = len(pvget(ioc.EvrTSI1))
+	assert(noTS14*14==noTS125)
+
+def test_period_diff_1ch(ioc,params):
 	setup_env(ioc,params)
 	TSDiffList = []
 	MaxPeriod = MinPeriod = -1
-	TSList = pvget(ioc.EvrTSI)
+	TSList = pvget(ioc.EvrTSI1)
 	for i in range(len(TSList)):
 		if i > 0:
 			TSDiffList.append(TSList[i]-TSList[i-1])
 	MaxPeriod = max(TSDiffList)
 	MinPeriod = min(TSDiffList)
-	#print ("Mindiff: ", MinPeriod)
-	#print ("Maxdiff: ", MaxPeriod)
+#	print ("Mindiff: ", MinPeriod)
+#	print ("Maxdiff: ", MaxPeriod)
 	print ("SP freq: ", params.Freq, "Act freq :", len(TSList)*14, "No of TS: ", len(TSList))
 	# within 2 ticks
 	assert(MaxPeriod-MinPeriod < 1000000000/88052500*2)
 	#assert(testPar[0] - len(TSList)*14 < 200)
 	#minmax(MaxPeriod,MinPeriod)	
 
-def tooHighCptEvt(ioc):
-	tooHighEvtNo = 300
+def test_highBWLimit_1ch(ioc,params):
+	bwHzLimit = 14*1024
 	setup_env(ioc,params)
-	origCptEvt = pvget(ioc.EvrCptEvtSP)
-	ioc.EvrCptEvtSP.put(tooHighEvtNo)
-	time.sleep(0.2)
-	newCptEvt = pvget(ioc.EvrCptEvtSP)
-	assert(origCptEvt == newCptEvt)
-
-def tooHighFlshEvt(ioc):
-	tooHighEvtNo = 300
-	setup_env(ioc,params)
-	origCptEvt = pvget(ioc.EvrFlshEvtSP)
-	ioc.EvrFlshEvtSP.put(tooHighEvtNo)
-	time.sleep(0.2)
-	newCptEvt = pvget(ioc.EvrFlshEvtSP)
-	assert(origCptEvt == newCptEvt)
-
-def test_changeCptEvt(ioc,params):
-	setup_env(ioc,params)
-#	EvrCptEvtSP = pvaccess.Channel("MDTST{evr:1-ts:1}CptEvt-SP", pvaccess.ProviderType.CA)
-#	origCptEvt = ioc.EvrCptEvtSP.get()["value"]
-	origCptEvt = pvget(ioc.EvrCptEvtSP)
-	ioc.EvrCptEvtSP.put(params.EvtNo)
-	time.sleep(0.5)
-	origCptEvt = pvget(ioc.EvrCptEvtSP)
-	ioc.EvrCptEvtSP.put(94)
-	time.sleep(0.5)
-	assert(origCptEvt != pvget(ioc.EvrCptEvtSP))
-
-def test_changeFlshEvt(ioc,params):
-	newFlshEvt = 125
-	setup_env(ioc,params)
-	ioc.EvrFlshEvtSP.put(14)
-	time.sleep(0.2)
-	noTS14 = len(pvget(ioc.EvrTSI))
-	ioc.EvrFlshEvtSP.put(newFlshEvt)
-	time.sleep(2.2)
-	noTS125 = len(pvget(ioc.EvrTSI))
-	assert(noTS14*14==noTS125)
-
-def test_highBWLimit(ioc,params):
-	bwHzLimit = 20000
-	setup_env(ioc,params)
-	ioc.EvgPrescaleSP.put(round(88052500/bwHzLimit))
+	ioc.EvgPrescaleSP1.put(round(88052500/bwHzLimit))
 	timestampsPerFlush = round(bwHzLimit/14)
 	time.sleep(0.2)
 	TSDiffList = []
-	TSList = pvget(ioc.EvrTSI)
+	TSList = pvget(ioc.EvrTSI1)
 	#print ("Mindiff: ", MinPeriod)
 	#print ("Maxdiff: ", MaxPeriod)
 	print ("TS per flush: ", timestampsPerFlush, "No of TS: ", len(TSList))
 	# less than 2 timestamps difference
 	assert(timestampsPerFlush-len(TSList)<2)
 
+def test_highBWLimit_4ch(ioc,params):
+	bwHzLimit = 14336
+	setup_env(ioc,params)
+	ioc.EvgPrescaleSP1.put(round(88052500/bwHzLimit))
+	ioc.EvgPrescaleSP2.put(round(88052500/bwHzLimit))
+	ioc.EvgPrescaleSP3.put(round(88052500/bwHzLimit))
+	ioc.EvgPrescaleSP4.put(round(88052500/bwHzLimit))
+	timestampsPerFlush = round(bwHzLimit/14)
+	time.sleep(0.2)
+	TSDiffList1 = []
+	TSDiffList2 = []
+	TSDiffList3 = []
+	TSDiffList4 = []
+	TSList1 = pvget(ioc.EvrTSI1)
+	TSList2 = pvget(ioc.EvrTSI2)
+	TSList3 = pvget(ioc.EvrTSI3)
+	TSList4 = pvget(ioc.EvrTSI4)
+	#print ("Mindiff: ", MinPeriod)
+	#print ("Maxdiff: ", MaxPeriod)
+	print ("TS per flush: ", timestampsPerFlush, "No of TS: ", len(TSList1), len(TSList2), len(TSList3), len(TSList4))
+	# less than 2 timestamps difference
+
+	assert(timestampsPerFlush-len(TSList1) < 2 and timestampsPerFlush-len(TSList2) < 2 and timestampsPerFlush-len(TSList3) < 2 and timestampsPerFlush-len(TSList4) < 2)
+
+
+def test_highBWLimitflush(ioc,params):
+	bwHzLimit = 896
+	setup_env(ioc,params)
+	ioc.EvgPrescaleSP1.put(round(88052500/(bwHzLimit*14)))
+	ioc.EvgPrescaleSP2.put(round(88052500/bwHzLimit))
+	ioc.EvrFlshEvtSP1.put(93)
+	timestampsPerFlush = round(bwHzLimit/14)
+	time.sleep(0.2)
+	TSDiffList = []
+	TSList = pvget(ioc.EvrTSI1)
+	#print ("Mindiff: ", MinPeriod)
+	#print ("Maxdiff: ", MaxPeriod)
+	print ("TS per flush: 14, No of TS: ", len(TSList))
+	# less than 2 timestamps difference
+	assert(14-len(TSList)<2)
+
+def test_relFirst(ioc):
+	#ioc.EvrCptEvtFirSP1.put
+	#ioc.EvrFlshEvtFirSP1
+	cptFreq = 56
+	setup_env(ioc,params)
+	ioc.EvgPrescaleSP1.put(round(88052500/cptFreq))
+	time.sleep(0.2)
+	TSDiffList = []
+	MaxPeriod = MinPeriod = -1
+	TSList = pvget(ioc.EvrTSIFir1)
+	for i in range(len(TSList)):
+		if i > 0:
+			TSDiffList.append(TSList[i]-TSList[i-1])
+	MaxPeriod = max(TSDiffList)
+	MinPeriod = min(TSDiffList)
+	print ("Mindiff: ", MinPeriod, "Maxdiff: ", MaxPeriod)
+	print ("SP freq: ", cptFreq, "Act freq :", len(TSList)*14, "No of TS: ", len(TSList), "TS list: ", pvget(ioc.EvrTSIFir1))
+	# within 2 ticks
+	#assert(TSList[0] == 0 and TSList[1] == round(10**9/56) and TSList[2] == round(10**9/56*2) and MaxPeriod-MinPeriod < 1000000000/88052500*2)
+	assert(TSList[0] == 0 and MaxPeriod-MinPeriod < 1000000000/88052500*2)
+
+def test_bufferOflw(ioc):
+	#assuming 10000 elements in buffer, cpt event at > 10kHz and flsh event at 1Hz
+	freqOverflow = 1024*14
+	setup_env(ioc,params)	
+	dropEvtStart1 = pvget(ioc.EvrDropI1)
+	dropEvtStart2 = pvget(ioc.EvrDropI2)
+	ioc.EvrFlshEvtSP1.put(125)
+	ioc.EvgPrescaleSP1.put(round(88052500/freqOverflow))
+	time.sleep(0.2)
+	ioc.EvrFlshEvtSP2.put(125)
+	ioc.EvgPrescaleSP2.put(round(88052500/freqOverflow))
+	time.sleep(4)
+	dropEvtEnd1 = pvget(ioc.EvrDropI1)
+	dropEvtEnd2 = pvget(ioc.EvrDropI2)
+	print(dropEvtStart1, dropEvtEnd1, dropEvtStart2, dropEvtEnd2)
+	assert(dropEvtStart1 < dropEvtEnd1 and dropEvtStart2 < dropEvtEnd2)
+
+def reset(ioc,params):
+	setup_env(ioc,params)
+	assert(pvget(ioc.EvrFlshEvtSP1) == 14)

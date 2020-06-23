@@ -15,7 +15,11 @@ mrmEvrSetupPCI("EVR","1:0.0")
 #dbLoadRecords("db/evr-pcie-300dc.db","SYS=MDTST, D=evr:1, EVR=EVR, FEVT=88.051948")
 dbLoadRecords("db/evr-pcie-300dc.db","SYS=MDTST, D=evr:1, EVR=EVR, FEVT=88.0525")
 
-dbLoadRecords("db/mrmevrtsbuf.db","SYS=MDTST, D=evr:1-ts:1, EVR=EVR, CODE=90, TRIG=14, NELM=10000")
+dbLoadRecords("db/mrmevrtsbufflu.db","SYS=MDTST, D=evr:1-tsflu:1, EVR=EVR, CODE=92, TRIG=14, NELM=10000")
+dbLoadRecords("db/mrmevrtsbufflu.db","SYS=MDTST, D=evr:1-tsflu:2, EVR=EVR, CODE=93, TRIG=14, NELM=10000")
+dbLoadRecords("db/mrmevrtsbufflu.db","SYS=MDTST, D=evr:1-tsflu:3, EVR=EVR, CODE=94, TRIG=14, NELM=10000")
+dbLoadRecords("db/mrmevrtsbufflu.db","SYS=MDTST, D=evr:1-tsflu:4, EVR=EVR, CODE=95, TRIG=14, NELM=10000")
+dbLoadRecords("db/mrmevrtsbuffir.db","SYS=MDTST, D=evr:1-tsfir:1, EVR=EVR, CODE=96, TRIG=14, NELM=10000")
 
 #dbLoadRecords("db/iocAdminRTEMS.db", "IOC=mrftest")
 
