@@ -144,6 +144,7 @@ def test_changeFlshEvtAndLowFreqFlsh(ioc,params):
 	assert(noTS14*14==noTS125)
 
 def test_period_diff_1ch(ioc,params):
+	# this test assumes that there is one physical output connected to an input
 	setup_env(ioc,params)
 	TSDiffList = []
 	MaxPeriod = MinPeriod = -1
@@ -153,7 +154,7 @@ def test_period_diff_1ch(ioc,params):
 			TSDiffList.append(TSList[i]-TSList[i-1])
 	MaxPeriod = max(TSDiffList)
 	MinPeriod = min(TSDiffList)
-	print ("SP freq: ", params.Freq, "Act freq :", len(TSList)*14, "No of TS: ", len(TSList))
+	#print ("SP freq: ", params.Freq, "Act freq :", len(TSList)*14, "No of TS: ", len(TSList))
 	# within 2 ticks
 	assert(MaxPeriod-MinPeriod < 1000000000/88052500*2)
 
@@ -185,7 +186,7 @@ def test_highBWLimit_4ch(ioc,params):
 	TSList2 = pvget(ioc.EvrTSI2)
 	TSList3 = pvget(ioc.EvrTSI3)
 	TSList4 = pvget(ioc.EvrTSI4)
-	print ("TS per flush: ", timestampsPerFlush, "No of TS: ", len(TSList1), len(TSList2), len(TSList3), len(TSList4))
+	#print ("TS per flush: ", timestampsPerFlush, "No of TS: ", len(TSList1), len(TSList2), len(TSList3), len(TSList4))
 	# less than 2 timestamps difference
 	assert(timestampsPerFlush-len(TSList1) < 2 and timestampsPerFlush-len(TSList2) < 2 and timestampsPerFlush-len(TSList3) < 2 and timestampsPerFlush-len(TSList4) < 2)
 
@@ -219,7 +220,7 @@ def test_relFirst(ioc):
 	MinPeriod = min(TSDiffList)
 	assert(TSList[0] == 0 and MaxPeriod-MinPeriod < 1000000000/88052500*2)
 
-def bufferOflw(ioc):
+def test_bufferOflw(ioc):
 	#assuming 10000 elements in buffer, cpt event at > 10kHz and flsh event at 1Hz
 	freqOverflow = 1024*14
 	setup_env(ioc,params)	
@@ -245,7 +246,7 @@ def test_manualFlsh(ioc):
 	time.sleep(2.0)
 	ioc.EvrManFlshFir2.put(1)
 	NoEvtsEnd = len(pvget(ioc.EvrTSIFir2))
-	print(NoEvtsEnd, len(pvget(ioc.EvrTSIFir2)), pvget(ioc.EvrTSIFir2))
+	#print(NoEvtsEnd, len(pvget(ioc.EvrTSIFir2)), pvget(ioc.EvrTSIFir2))
 	assert(NoEvtsEnd == 28)
 
 def test_performanceStress(ioc):
@@ -265,7 +266,7 @@ def test_performanceStress(ioc):
 	#Reverse array, add 11ns (1 tick) and make timestamp positive
 	FlushTSRev = [(x+11)*-1 for x in FlushTS[::-1]]
 	
-	print("TS: ", FirstTS, FlushTS, FlushTSRev, np.subtract(FlushTSRev,FirstTS))
+#	print("TS: ", FirstTS, FlushTS, FlushTSRev, np.subtract(FlushTSRev,FirstTS))
 	#If difference is larger than 2ns, not ok
 	assert(max(np.subtract(FlushTSRev,FirstTS)) <= 2)
 
