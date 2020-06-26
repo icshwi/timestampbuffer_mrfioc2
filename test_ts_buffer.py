@@ -46,6 +46,12 @@ class IOC:
 		self.EvrManFlshFir2 = pvaccess.Channel("MDTST{evr:1-tsfir:2}Flsh-SP", pvaccess.ProviderType.CA)
 		self.EvrDropI1 = pvaccess.Channel("MDTST{evr:1-tsflu:1}Drop-I", pvaccess.ProviderType.CA)
 		self.EvrDropI2 = pvaccess.Channel("MDTST{evr:1-tsflu:2}Drop-I", pvaccess.ProviderType.CA)
+		self.EvgSeq2Unit = pvaccess.Channel("Utgard:MDS:TS-EVG-01:SoftSeq2-TsResolution-Sel", pvaccess.ProviderType.CA)
+		self.EvgSeq2Evts = pvaccess.Channel("Utgard:MDS:TS-EVG-01:SoftSeq2-EvtCode-SP", pvaccess.ProviderType.CA)
+		self.EvgSeq2TS = pvaccess.Channel("Utgard:MDS:TS-EVG-01:SoftSeq2-Timestamp-SP", pvaccess.ProviderType.CA)
+		self.EvgSeq2Commit = pvaccess.Channel("Utgard:MDS:TS-EVG-01:SoftSeq2-Commit-Cmd", pvaccess.ProviderType.CA)
+
+
 @pytest.fixture(scope="session")
 def ioc():
 	return IOC()
@@ -118,8 +124,6 @@ def tooHighFlshEvt(ioc):
 
 def test_changeCptEvt(ioc,params):
 	setup_env(ioc,params)
-#	EvrCptEvtSP = pvaccess.Channel("MDTST{evr:1-tsflu:1}CptEvt-SP", pvaccess.ProviderType.CA)
-#	origCptEvt = ioc.EvrCptEvtSP.get()["value"]
 	origCptEvt = pvget(ioc.EvrCptEvtSP1)
 	ioc.EvrCptEvtSP1.put(params.EvtNo)
 	time.sleep(0.5)
@@ -149,13 +153,9 @@ def test_period_diff_1ch(ioc,params):
 			TSDiffList.append(TSList[i]-TSList[i-1])
 	MaxPeriod = max(TSDiffList)
 	MinPeriod = min(TSDiffList)
-#	print ("Mindiff: ", MinPeriod)
-#	print ("Maxdiff: ", MaxPeriod)
 	print ("SP freq: ", params.Freq, "Act freq :", len(TSList)*14, "No of TS: ", len(TSList))
 	# within 2 ticks
 	assert(MaxPeriod-MinPeriod < 1000000000/88052500*2)
-	#assert(testPar[0] - len(TSList)*14 < 200)
-	#minmax(MaxPeriod,MinPeriod)	
 
 def test_highBWLimit_1ch(ioc,params):
 	bwHzLimit = 14*1024
@@ -165,9 +165,6 @@ def test_highBWLimit_1ch(ioc,params):
 	time.sleep(0.2)
 	TSDiffList = []
 	TSList = pvget(ioc.EvrTSI1)
-	#print ("Mindiff: ", MinPeriod)
-	#print ("Maxdiff: ", MaxPeriod)
-	print ("TS per flush: ", timestampsPerFlush, "No of TS: ", len(TSList))
 	# less than 2 timestamps difference
 	assert(timestampsPerFlush-len(TSList)<2)
 
@@ -188,11 +185,8 @@ def test_highBWLimit_4ch(ioc,params):
 	TSList2 = pvget(ioc.EvrTSI2)
 	TSList3 = pvget(ioc.EvrTSI3)
 	TSList4 = pvget(ioc.EvrTSI4)
-	#print ("Mindiff: ", MinPeriod)
-	#print ("Maxdiff: ", MaxPeriod)
 	print ("TS per flush: ", timestampsPerFlush, "No of TS: ", len(TSList1), len(TSList2), len(TSList3), len(TSList4))
 	# less than 2 timestamps difference
-
 	assert(timestampsPerFlush-len(TSList1) < 2 and timestampsPerFlush-len(TSList2) < 2 and timestampsPerFlush-len(TSList3) < 2 and timestampsPerFlush-len(TSList4) < 2)
 
 
@@ -206,15 +200,11 @@ def test_highBWLimitflush(ioc,params):
 	time.sleep(0.2)
 	TSDiffList = []
 	TSList = pvget(ioc.EvrTSI1)
-	#print ("Mindiff: ", MinPeriod)
-	#print ("Maxdiff: ", MaxPeriod)
 #	print ("TS per flush: 14, No of TS: ", len(TSList))
 	# less than 2 timestamps difference
 	assert(14-len(TSList)<2)
 
 def test_relFirst(ioc):
-	#ioc.EvrCptEvtFirSP1.put
-	#ioc.EvrFlshEvtFirSP1
 	cptFreq = 56
 	setup_env(ioc,params)
 	ioc.EvgPrescaleSP1.put(round(88052500/cptFreq))
@@ -227,13 +217,9 @@ def test_relFirst(ioc):
 			TSDiffList.append(TSList[i]-TSList[i-1])
 	MaxPeriod = max(TSDiffList)
 	MinPeriod = min(TSDiffList)
-#	print ("Mindiff: ", MinPeriod, "Maxdiff: ", MaxPeriod)
-#	print ("SP freq: ", cptFreq, "Act freq :", len(TSList)*14, "No of TS: ", len(TSList), "TS list: ", pvget(ioc.EvrTSIFir1))
-	# within 2 ticks
-	#assert(TSList[0] == 0 and TSList[1] == round(10**9/56) and TSList[2] == round(10**9/56*2) and MaxPeriod-MinPeriod < 1000000000/88052500*2)
 	assert(TSList[0] == 0 and MaxPeriod-MinPeriod < 1000000000/88052500*2)
 
-def test_bufferOflw(ioc):
+def bufferOflw(ioc):
 	#assuming 10000 elements in buffer, cpt event at > 10kHz and flsh event at 1Hz
 	freqOverflow = 1024*14
 	setup_env(ioc,params)	
@@ -251,14 +237,37 @@ def test_bufferOflw(ioc):
 	assert(dropEvtStart1 < dropEvtEnd1 and dropEvtStart2 < dropEvtEnd2)
 
 def test_manualFlsh(ioc):
+	setup_env(ioc,params)
+	ioc.EvrFlshEvtFirSP2.put(199)
 	ioc.EvrCptEvtFirSP2.put(14)
 	time.sleep(0.2)
 	ioc.EvrManFlshFir2.put(1)
 	time.sleep(2.0)
 	ioc.EvrManFlshFir2.put(1)
 	NoEvtsEnd = len(pvget(ioc.EvrTSIFir2))
-#	print(NoEvtsEnd, len(pvget(ioc.EvrTSIFir2)), pvget(ioc.EvrTSIFir2))
+	print(NoEvtsEnd, len(pvget(ioc.EvrTSIFir2)), pvget(ioc.EvrTSIFir2))
 	assert(NoEvtsEnd == 28)
+
+def test_performanceStress(ioc):
+	ioc.EvgSeq2Unit.put("Ticks")
+	ioc.EvgSeq2Evts.put([10, 98, 98, 98, 98, 99, 98, 98, 98, 98])
+	ioc.EvgSeq2TS.put([10, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009])
+	ioc.EvrCptEvtFirSP1.put(98)
+	ioc.EvrFlshEvtFirSP1.put(99)
+	ioc.EvrCptEvtSP4.put(98)
+	ioc.EvrFlshEvtSP4.put(99)
+	time.sleep(0.2)
+	ioc.EvgSeq2Commit.put(1)
+	time.sleep(0.2)
+	FirstTS = pvget(ioc.EvrTSIFir1)
+	FlushTS = pvget(ioc.EvrTSI4)
+	#First TS should be one tick earlier than flush TS. Flush event happens one tick earlier
+	#Reverse array, add 11ns (1 tick) and make timestamp positive
+	FlushTSRev = [(x+11)*-1 for x in FlushTS[::-1]]
+	
+	print("TS: ", FirstTS, FlushTS, FlushTSRev, np.subtract(FlushTSRev,FirstTS))
+	#If difference is larger than 2ns, not ok
+	assert(max(np.subtract(FlushTSRev,FirstTS)) <= 2)
 
 def test_reset(ioc,params):
 	setup_env(ioc,params)

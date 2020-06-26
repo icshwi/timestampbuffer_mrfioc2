@@ -56,7 +56,7 @@ dbpf MDTST{evr:1-SoftSeq:0}Load-Cmd 1
 dbpf MDTST{evr:1-SoftSeq:0}RunMode-Sel "Normal"
 dbpf MDTST{evr:1-SoftSeq:0}TrigSrc:0-Sel "Pulser 2"
 dbpf MDTST{evr:1-SoftSeq:0}TsResolution-Sel "Ticks"
-dbpf MDTST{evr:1-ts:1}FlshEvt-SP 14
+dbpf MDTST{evr:1-tsflu:1}FlshEvt-SP 14
 
 #makeAutosaveFileFromDbInfo("as/req/mrf_settings.req", "autosaveFields_pass0")
 #makeAutosaveFileFromDbInfo("as/req/mrf_values.req", "autosaveFields")
