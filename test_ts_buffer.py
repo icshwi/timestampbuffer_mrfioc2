@@ -15,6 +15,7 @@ def pvget(channel):
 
 class IOC:
 	def __init__(self):
+		#Define all channels with CA
 		self.EvgPrescaleSP1 = pvaccess.Channel("Utgard:MDS:TS-EVG-01:Mxc2-Prescaler-SP", pvaccess.ProviderType.CA)
 		self.EvgPrescaleSP2 = pvaccess.Channel("Utgard:MDS:TS-EVG-01:Mxc3-Prescaler-SP", pvaccess.ProviderType.CA)
 		self.EvgPrescaleSP3 = pvaccess.Channel("Utgard:MDS:TS-EVG-01:Mxc4-Prescaler-SP", pvaccess.ProviderType.CA)
@@ -63,6 +64,7 @@ class ParamStruct:
 		self.EvtNo = EvtNo
 		self.FlshNo = FlshNo
 
+#Used if a separate parameter file is needed
 @pytest.fixture(scope="function")
 def params():
 	array = []
@@ -75,8 +77,8 @@ def params():
 				ParamStruct.FlshNo = int(x.split(",")[3])
 					
 	return ParamStruct
-
-def setup_env(ioc,params):
+#Resets the parameters for every test
+def setup_env(ioc):
 	EVGFreq = 28
 	FreqEvt = 92
 	CptEvt = 92
@@ -103,38 +105,40 @@ def setup_env(ioc,params):
 	ioc.EvrFlshEvtFirSP1.put(FlshEvt)
 	time.sleep(0.2)
 
+#Asserts the difference between SP capture event and ReadBack capture event if larger than 255
 def tooHighCptEvt(ioc):
 	tooHighEvtNo = 300
-	setup_env(ioc,params)
+	setup_env(ioc)
 	origCptEvt = pvget(ioc.EvrCptEvtSP1)
 	ioc.EvrCptEvtSP1.put(tooHighEvtNo)
 	time.sleep(0.2)
 	newCptEvt = pvget(ioc.EvrCptEvtSP1)
 	assert(origCptEvt == newCptEvt)
 
+#Assert the difference between SP flush event and ReadBack flush event number if larger than 255
 def tooHighFlshEvt(ioc):
 	tooHighEvtNo = 300
-	setup_env(ioc,params)
+	setup_env(ioc)
 	origCptEvt = pvget(ioc.EvrFlshEvtSP1)
 	ioc.EvrFlshEvtSP1.put(tooHighEvtNo)
 	time.sleep(0.2)
 	newCptEvt = pvget(ioc.EvrFlshEvtSP1)
 	assert(origCptEvt == newCptEvt)
 
-
-def test_changeCptEvt(ioc,params):
-	setup_env(ioc,params)
+#Assert changing capture event on the fly
+def test_changeCptEvt(ioc):
+	setup_env(ioc)
 	origCptEvt = pvget(ioc.EvrCptEvtSP1)
-	ioc.EvrCptEvtSP1.put(params.EvtNo)
 	time.sleep(0.5)
 	origCptEvt = pvget(ioc.EvrCptEvtSP1)
-	ioc.EvrCptEvtSP1.put(94)
+	ioc.EvrCptEvtSP1.put(104)
 	time.sleep(0.5)
 	assert(origCptEvt != pvget(ioc.EvrCptEvtSP1))
 
-def test_changeFlshEvtAndLowFreqFlsh(ioc,params):
+#Assert changing flush event on the fly
+def test_changeFlshEvtAndLowFreqFlsh(ioc):
 	newFlshEvt = 125
-	setup_env(ioc,params)
+	setup_env(ioc)
 	ioc.EvrFlshEvtSP1.put(14)
 	time.sleep(0.4)
 	noTS14 = len(pvget(ioc.EvrTSI1))
@@ -143,9 +147,10 @@ def test_changeFlshEvtAndLowFreqFlsh(ioc,params):
 	noTS125 = len(pvget(ioc.EvrTSI1))
 	assert(noTS14*14==noTS125)
 
-def test_period_diff_1ch(ioc,params):
+#Assert the period stability in ticks when using a physical input to generate events
+def test_period_diff_1ch(ioc):
 	# this test assumes that there is one physical output connected to an input
-	setup_env(ioc,params)
+	setup_env(ioc)
 	TSDiffList = []
 	MaxPeriod = MinPeriod = -1
 	TSList = pvget(ioc.EvrTSI1)
@@ -158,9 +163,10 @@ def test_period_diff_1ch(ioc,params):
 	# within 2 ticks
 	assert(MaxPeriod-MinPeriod < 1000000000/88052500*2)
 
-def test_highBWLimit_1ch(ioc,params):
+#Assert the frequency high limit for 1 channel
+def test_highBWLimit_1ch(ioc):
 	bwHzLimit = 14*1024
-	setup_env(ioc,params)
+	setup_env(ioc)
 	ioc.EvgPrescaleSP1.put(round(88052500/bwHzLimit))
 	timestampsPerFlush = round(bwHzLimit/14)
 	time.sleep(0.2)
@@ -169,9 +175,10 @@ def test_highBWLimit_1ch(ioc,params):
 	# less than 2 timestamps difference
 	assert(timestampsPerFlush-len(TSList)<2)
 
-def test_highBWLimit_4ch(ioc,params):
+#Assert the frequency low limit for 4 channels
+def test_highBWLimit_4ch(ioc):
 	bwHzLimit = 14336
-	setup_env(ioc,params)
+	setup_env(ioc)
 	ioc.EvgPrescaleSP1.put(round(88052500/bwHzLimit))
 	ioc.EvgPrescaleSP2.put(round(88052500/bwHzLimit))
 	ioc.EvgPrescaleSP3.put(round(88052500/bwHzLimit))
@@ -190,10 +197,10 @@ def test_highBWLimit_4ch(ioc,params):
 	# less than 2 timestamps difference
 	assert(timestampsPerFlush-len(TSList1) < 2 and timestampsPerFlush-len(TSList2) < 2 and timestampsPerFlush-len(TSList3) < 2 and timestampsPerFlush-len(TSList4) < 2)
 
-
-def test_highBWLimitflush(ioc,params):
-	bwHzLimit = 896
-	setup_env(ioc,params)
+#Assert the high limit for flushing
+def test_highBWLimitflush(ioc):
+	bwHzLimit = 896 #Hz
+	setup_env(ioc)
 	ioc.EvgPrescaleSP1.put(round(88052500/(bwHzLimit*14)))
 	ioc.EvgPrescaleSP2.put(round(88052500/bwHzLimit))
 	ioc.EvrFlshEvtSP1.put(93)
@@ -205,9 +212,10 @@ def test_highBWLimitflush(ioc,params):
 	# less than 2 timestamps difference
 	assert(14-len(TSList)<2)
 
+#Assert using first event as timestamp reference
 def test_relFirst(ioc):
 	cptFreq = 56
-	setup_env(ioc,params)
+	setup_env(ioc)
 	ioc.EvgPrescaleSP1.put(round(88052500/cptFreq))
 	time.sleep(0.2)
 	TSDiffList = []
@@ -220,10 +228,11 @@ def test_relFirst(ioc):
 	MinPeriod = min(TSDiffList)
 	assert(TSList[0] == 0 and MaxPeriod-MinPeriod < 1000000000/88052500*2)
 
+#Assert catching buffer overflow, 10s response time by design
 def test_bufferOflw(ioc):
 	#assuming 10000 elements in buffer, cpt event at > 10kHz and flsh event at 1Hz
 	freqOverflow = 1024*14
-	setup_env(ioc,params)	
+	setup_env(ioc)	
 	dropEvtStart1 = pvget(ioc.EvrDropI1)
 	dropEvtStart2 = pvget(ioc.EvrDropI2)
 	ioc.EvrFlshEvtSP1.put(125)
@@ -237,8 +246,9 @@ def test_bufferOflw(ioc):
 #	print(dropEvtStart1, dropEvtEnd1, dropEvtStart2, dropEvtEnd2)
 	assert(dropEvtStart1 < dropEvtEnd1 and dropEvtStart2 < dropEvtEnd2)
 
+#Assert manual flush. Evt 14 happens 14 times per second, during 2s sleep, 28 events should be timestamped
 def test_manualFlsh(ioc):
-	setup_env(ioc,params)
+	setup_env(ioc)
 	ioc.EvrFlshEvtFirSP2.put(199)
 	ioc.EvrCptEvtFirSP2.put(14)
 	time.sleep(0.2)
@@ -249,6 +259,7 @@ def test_manualFlsh(ioc):
 	#print(NoEvtsEnd, len(pvget(ioc.EvrTSIFir2)), pvget(ioc.EvrTSIFir2))
 	assert(NoEvtsEnd == 28)
 
+#Assert that even if consecutive ticks are timestamped, and a flush is put in the middle, the buffer can handle it
 def test_performanceStress(ioc):
 	ioc.EvgSeq2Unit.put("Ticks")
 	ioc.EvgSeq2Evts.put([10, 98, 98, 98, 98, 99, 98, 98, 98, 98])
@@ -270,6 +281,7 @@ def test_performanceStress(ioc):
 	#If difference is larger than 2ns, not ok
 	assert(max(np.subtract(FlushTSRev,FirstTS)) <= 2)
 
-def test_reset(ioc,params):
-	setup_env(ioc,params)
+#Reset the HW
+def test_reset(ioc):
+	setup_env(ioc)
 	assert(pvget(ioc.EvrFlshEvtSP1) == 14)
