@@ -21,6 +21,7 @@ dbLoadRecords("db/mrmevrtsbufflu.db","SYS=MDTST, D=evr:1-tsflu:3, EVR=EVR, CODE=
 dbLoadRecords("db/mrmevrtsbufflu.db","SYS=MDTST, D=evr:1-tsflu:4, EVR=EVR, CODE=95, TRIG=14, NELM=10000")
 dbLoadRecords("db/mrmevrtsbuffir.db","SYS=MDTST, D=evr:1-tsfir:1, EVR=EVR, CODE=96, TRIG=14, NELM=10000")
 dbLoadRecords("db/mrmevrtsbuffir.db","SYS=MDTST, D=evr:1-tsfir:2, EVR=EVR, CODE=97, TRIG=98, NELM=10000")
+dbLoadRecords("db/mrmevrtsbuf.db","SYS=MDTST, D=evr:1-ts:1, EVR=EVR, CODE=99, TRIG=14, NELM=10000")
 
 #dbLoadRecords("db/iocAdminRTEMS.db", "IOC=mrftest")
 

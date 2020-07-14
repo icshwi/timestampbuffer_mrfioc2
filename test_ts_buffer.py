@@ -13,6 +13,9 @@ import struct
 def pvget(channel):
 	return channel.get()["value"]
 
+def pvgetalrm(channel):
+	return channel.get()["alarm"]["severity"]
+
 class IOC:
 	def __init__(self):
 		#Define all channels with CA
@@ -51,7 +54,9 @@ class IOC:
 		self.EvgSeq2Evts = pvaccess.Channel("Utgard:MDS:TS-EVG-01:SoftSeq2-EvtCode-SP", pvaccess.ProviderType.CA)
 		self.EvgSeq2TS = pvaccess.Channel("Utgard:MDS:TS-EVG-01:SoftSeq2-Timestamp-SP", pvaccess.ProviderType.CA)
 		self.EvgSeq2Commit = pvaccess.Channel("Utgard:MDS:TS-EVG-01:SoftSeq2-Commit-Cmd", pvaccess.ProviderType.CA)
-
+		self.EvrRBCptEvtSP1 = pvaccess.Channel("MDTST{evr:1-ts:1}CptEvt-SP", pvaccess.ProviderType.CA)
+		self.EvrRBCptEvtRB1 = pvaccess.Channel("MDTST{evr:1-ts:1}CptEvt-RB", pvaccess.ProviderType.CA)
+		self.EvrTSI1Alrm = pvaccess.Channel("MDTST{evr:1-tsflu:1}TS-I")
 
 @pytest.fixture(scope="session")
 def ioc():
@@ -103,6 +108,7 @@ def setup_env(ioc):
 	ioc.EvrFlshEvtSP4.put(FlshEvt)
 	ioc.EvrCptEvtFirSP1.put(CptEvt)
 	ioc.EvrFlshEvtFirSP1.put(FlshEvt)
+	ioc.EvrRBCptEvtSP1.put(99)
 	time.sleep(0.2)
 
 #Asserts the difference between SP capture event and ReadBack capture event if larger than 255
@@ -228,24 +234,6 @@ def test_relFirst(ioc):
 	MinPeriod = min(TSDiffList)
 	assert(TSList[0] == 0 and MaxPeriod-MinPeriod < 1000000000/88052500*2)
 
-#Assert catching buffer overflow, 10s response time by design
-def test_bufferOflw(ioc):
-	#assuming 10000 elements in buffer, cpt event at > 10kHz and flsh event at 1Hz
-	freqOverflow = 1024*14
-	setup_env(ioc)	
-	dropEvtStart1 = pvget(ioc.EvrDropI1)
-	dropEvtStart2 = pvget(ioc.EvrDropI2)
-	ioc.EvrFlshEvtSP1.put(125)
-	ioc.EvgPrescaleSP1.put(round(88052500/freqOverflow))
-	time.sleep(0.2)
-	ioc.EvrFlshEvtSP2.put(125)
-	ioc.EvgPrescaleSP2.put(round(88052500/freqOverflow))
-	time.sleep(11)
-	dropEvtEnd1 = pvget(ioc.EvrDropI1)
-	dropEvtEnd2 = pvget(ioc.EvrDropI2)
-#	print(dropEvtStart1, dropEvtEnd1, dropEvtStart2, dropEvtEnd2)
-	assert(dropEvtStart1 < dropEvtEnd1 and dropEvtStart2 < dropEvtEnd2)
-
 #Assert manual flush. Evt 14 happens 14 times per second, during 2s sleep, 28 events should be timestamped
 def test_manualFlsh(ioc):
 	setup_env(ioc)
@@ -261,6 +249,7 @@ def test_manualFlsh(ioc):
 
 #Assert that even if consecutive ticks are timestamped, and a flush is put in the middle, the buffer can handle it
 def test_performanceStress(ioc):
+	setup_env(ioc)
 	ioc.EvgSeq2Unit.put("Ticks")
 	ioc.EvgSeq2Evts.put([10, 98, 98, 98, 98, 99, 98, 98, 98, 98])
 	ioc.EvgSeq2TS.put([10, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009])
@@ -280,6 +269,48 @@ def test_performanceStress(ioc):
 #	print("TS: ", FirstTS, FlushTS, FlushTSRev, np.subtract(FlushTSRev,FirstTS))
 	#If difference is larger than 2ns, not ok
 	assert(max(np.subtract(FlushTSRev,FirstTS)) <= 2)
+
+def test_readback(ioc):
+	setup_env(ioc)
+	SPPrev = pvget(ioc.EvrRBCptEvtSP1)
+	RBPrev = pvget(ioc.EvrRBCptEvtRB1)
+	ioc.EvrRBCptEvtRB1.put(100)
+	SPNext = pvget(ioc.EvrRBCptEvtSP1)
+	RBNext = pvget(ioc.EvrRBCptEvtRB1)
+	assert(SPPrev == RBPrev and SPNext == RBNext)
+
+def test_oflwAlrm(ioc):
+	freqOverflow = 1024*14
+	setup_env(ioc)
+	#print(pvaccess.Channel("MDTST{evr:1-tsflu:1}TS-I").get()["alarm"])
+	AlrmStatPrev = pvgetalrm(ioc.EvrTSI1Alrm)
+	ioc.EvrFlshEvtSP1.put(125)
+	ioc.EvgPrescaleSP1.put(round(88052500/freqOverflow))
+	time.sleep(2)
+	AlrmStatMajor = pvgetalrm(ioc.EvrTSI1Alrm)
+	setup_env(ioc)
+	AlrmStatNext = pvgetalrm(ioc.EvrTSI1Alrm)
+	#print("Before: {}, During: {}, After: {}, {}", AlrmStatPrev, AlrmStatMajor, AlrmStatNext, )
+	assert(AlrmStatNext == AlrmStatPrev and AlrmStatPrev != AlrmStatMajor and AlrmStatMajor == 2)
+
+#Assert catching buffer overflow, 10s response time by design
+def test_bufferOflw(ioc):
+	#assuming 10000 elements in buffer, cpt event at > 10kHz and flsh event at 1Hz
+	freqOverflow = 1024*14
+	setup_env(ioc)	
+	dropEvtStart1 = pvget(ioc.EvrDropI1)
+	dropEvtStart2 = pvget(ioc.EvrDropI2)
+	ioc.EvrFlshEvtSP1.put(125)
+	ioc.EvgPrescaleSP1.put(round(88052500/freqOverflow))
+	time.sleep(0.2)
+	ioc.EvrFlshEvtSP2.put(125)
+	ioc.EvgPrescaleSP2.put(round(88052500/freqOverflow))
+	time.sleep(11)
+	dropEvtEnd1 = pvget(ioc.EvrDropI1)
+	dropEvtEnd2 = pvget(ioc.EvrDropI2)
+#	print(dropEvtStart1, dropEvtEnd1, dropEvtStart2, dropEvtEnd2)
+	assert(dropEvtStart1 < dropEvtEnd1 and dropEvtStart2 < dropEvtEnd2)
+
 
 #Reset the HW
 def test_reset(ioc):
