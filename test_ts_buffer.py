@@ -270,6 +270,7 @@ def test_performanceStress(ioc):
 	#If difference is larger than 2ns, not ok
 	assert(max(np.subtract(FlushTSRev,FirstTS)) <= 2)
 
+#Check read back PVs
 def test_readback(ioc):
 	setup_env(ioc)
 	SPPrev = pvget(ioc.EvrRBCptEvtSP1)
@@ -279,6 +280,18 @@ def test_readback(ioc):
 	RBNext = pvget(ioc.EvrRBCptEvtRB1)
 	assert(SPPrev == RBPrev and SPNext == RBNext)
 
+#Check that timestamp array is empty if no timestamps are received between flushes
+def test_noTS(ioc):
+	setup_env(ioc)
+	ioc.EvrCptEvtSP4.put(160)
+	time.sleep(0.2)
+	TSempty = pvget(ioc.EvrTSI4)
+	ioc.EvrCptEvtSP4.put(95)
+	time.sleep(0.2)
+	TSexists = pvget(ioc.EvrTSI4)
+	#print("Empty: ",TSempty, "NotEmpty: ",TSexists)
+	assert(len(TSexists) > 0 and len(TSempty) == 0)
+	
 def test_oflwAlrm(ioc):
 	freqOverflow = 1024*14
 	setup_env(ioc)
