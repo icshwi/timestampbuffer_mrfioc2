@@ -33,14 +33,17 @@ class IOC:
 		self.EvrCptEvtSP2 = pvaccess.Channel("MDTST{evr:1-tsflu:2}CptEvt-SP", pvaccess.ProviderType.CA)
 		self.EvrCptEvtSP3 = pvaccess.Channel("MDTST{evr:1-tsflu:3}CptEvt-SP", pvaccess.ProviderType.CA)
 		self.EvrCptEvtSP4 = pvaccess.Channel("MDTST{evr:1-tsflu:4}CptEvt-SP", pvaccess.ProviderType.CA)
+		self.EvrCptEvtPrevSP1 = pvaccess.Channel("MDTST{evr:1-tsprev:1}CptEvt-SP", pvaccess.ProviderType.CA)
 		self.EvrFlshEvtSP1 = pvaccess.Channel("MDTST{evr:1-tsflu:1}FlshEvt-SP", pvaccess.ProviderType.CA)
 		self.EvrFlshEvtSP2 = pvaccess.Channel("MDTST{evr:1-tsflu:2}FlshEvt-SP", pvaccess.ProviderType.CA)
 		self.EvrFlshEvtSP3 = pvaccess.Channel("MDTST{evr:1-tsflu:3}FlshEvt-SP", pvaccess.ProviderType.CA)
 		self.EvrFlshEvtSP4 = pvaccess.Channel("MDTST{evr:1-tsflu:4}FlshEvt-SP", pvaccess.ProviderType.CA)
+		self.EvrFlshEvtPrevSP1 = pvaccess.Channel("MDTST{evr:1-tsprev:1}FlshEvt-SP", pvaccess.ProviderType.CA)
 		self.EvrTSI1 = pvaccess.Channel("MDTST{evr:1-tsflu:1}TS-I", pvaccess.ProviderType.CA)
 		self.EvrTSI2 = pvaccess.Channel("MDTST{evr:1-tsflu:2}TS-I", pvaccess.ProviderType.CA)
 		self.EvrTSI3 = pvaccess.Channel("MDTST{evr:1-tsflu:3}TS-I", pvaccess.ProviderType.CA)
 		self.EvrTSI4 = pvaccess.Channel("MDTST{evr:1-tsflu:4}TS-I", pvaccess.ProviderType.CA)
+		self.EvrTSIPrev1 = pvaccess.Channel("MDTST{evr:1-tsprev:1}TS-I", pvaccess.ProviderType.CA)
 		self.EvrCptEvtFirSP1 = pvaccess.Channel("MDTST{evr:1-tsfir:1}CptEvt-SP", pvaccess.ProviderType.CA)
 		self.EvrFlshEvtFirSP1 = pvaccess.Channel("MDTST{evr:1-tsfir:1}FlshEvt-SP", pvaccess.ProviderType.CA)
 		self.EvrCptEvtFirSP2 = pvaccess.Channel("MDTST{evr:1-tsfir:2}CptEvt-SP", pvaccess.ProviderType.CA)
@@ -102,10 +105,12 @@ def setup_env(ioc):
 	ioc.EvrCptEvtSP2.put(CptEvt+1)
 	ioc.EvrCptEvtSP3.put(CptEvt+2)
 	ioc.EvrCptEvtSP4.put(CptEvt+3)
+	ioc.EvrCptEvtPrevSP1.put(CptEvt)
 	ioc.EvrFlshEvtSP1.put(FlshEvt)
 	ioc.EvrFlshEvtSP2.put(FlshEvt)
 	ioc.EvrFlshEvtSP3.put(FlshEvt)
 	ioc.EvrFlshEvtSP4.put(FlshEvt)
+	ioc.EvrFlshEvtPrevSP1.put(FlshEvt)
 	ioc.EvrCptEvtFirSP1.put(CptEvt)
 	ioc.EvrFlshEvtFirSP1.put(FlshEvt)
 	ioc.EvrRBCptEvtSP1.put(99)
@@ -291,6 +296,13 @@ def test_noTS(ioc):
 	TSexists = pvget(ioc.EvrTSI4)
 	#print("Empty: ",TSempty, "NotEmpty: ",TSexists)
 	assert(len(TSexists) > 0 and len(TSempty) == 0)
+
+def test_prevFlush(ioc):
+	setup_env(ioc)
+	prevFlshTS = pvget(ioc.EvrTSIPrev1)
+	oneTick = 10**9/88052500
+	#print(round(prevFlshTS[0]), " , ", round(prevFlshTS[0]/oneTick), " , ", 1, " , ", round(prevFlshTS[1]), " , ", round(prevFlshTS[1]/oneTick), " , ", round(88052500/28)+1)
+	assert(round(prevFlshTS[0]/oneTick) == 1 and round(prevFlshTS[1]/oneTick) == round((88052500/28)+1))
 	
 def test_oflwAlrm(ioc):
 	freqOverflow = 1024*14
